@@ -1,0 +1,403 @@
+---
+runtime: shiny
+output:
+  html_document:
+    toc: true
+    toc_depth: 5
+    theme: paper
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(shiny)
+library(dplyr)
+library(ggplot2)
+```
+## Shiny for RNASeq Visualization - Templates & Examples
+
+<br>
+<br>
+<br>
+
+### Inputs & Outputs
+
+***
+
+The UI of the Shiny app is defined in the first portion of the code
+
+` ui <- fluidPage( ... ) `
+
+The server logic of the app is delineated to encompase the inputs from the UI and the outputs specified in the server section of the code
+
+` server <- function(input, output) { ... }`
+
+In order to manipulate data within the app, be sure to place it into a reactive environment
+
+` selectedData <- reactive({ ... }) `
+
+Or, any a reactive environment can also be created along with the output
+
+` output$plot <- renderPlot({ ... }) `
+
+Finally, the shiny app can be launched
+
+` shinyApp(ui = ui, server = server) `
+
+***
+<br>
+<br>
+
+
+
+
+### Template & Example 1: 
+
+***
+
+* General histrogram with gene lookup
+
+* Dropdown menu: (count types)
+
+* Figure/diagram
+
+* Download original data file
+
+<br>
+```{r, echo=FALSE}
+
+
+
+# Define UI for application
+ui <- fluidPage(
+ 
+  sidebarLayout(
+    sidebarPanel(textInput(inputId = "geneName1",label = "Gene Name (Mouse): (Capitalize first letter)"),
+                 
+                 #select data value to be graphed
+                 selectInput("countType", 
+                             label = "Choose a count type to display",
+                             choices = c("count", "tpm", "fpkm")),
+                 
+                 #click to download dataset and metadata table
+                 downloadButton("downloadData1", "Download Data Table")
+    ),
+    mainPanel(h4('Non-GCB v GCB Bulk RNA-seq'),
+              h6('each point represents a biological replicate'),
+              h6('Experimental design:'),
+              imageOutput("overview"),
+             )
+    
+    
+  ),
+  
+  plotOutput(outputId = "genePlot1",height=300,width=700)
+  
+  
+)
+```
+
+
+```{r, echo=FALSE}
+
+# Define server logic required to draw a histogram
+
+server <- function(input, output) {
+  data1 <- read.table('dataAndMetaCounts_gene.txt', header = TRUE, sep = "\t")  
+  selectedData1 <- reactive({
+    dplyr::filter(data1, gene_name == input$geneName1)
+  })
+  
+  output$overview <- renderImage({
+    list(src = 'overview.png', height = 350, width = 350)
+  }, deleteFile = FALSE)
+  
+  output$genePlot1 <- renderPlot({
+    
+    dataTemp <- selectedData1()
+    
+      output$value <- renderText({ input$somevalue })
+      
+      if(input$countType == "count"){
+        ggplot(data = dataTemp, aes(x=cell_subpopulation,y=est_counts))+
+          geom_boxplot(aes(fill=cell_subpopulation),alpha=0.2, outlier.shape = NA)+
+          theme_bw()+ylab('raw count')
+      } 
+      
+      else if(input$countType == "tpm"){
+        ggplot(data = dataTemp, aes(x=cell_subpopulation,y=tpm))+
+          geom_boxplot(aes(fill=cell_subpopulation),alpha=0.2, outlier.shape = NA)+
+          theme_bw()+ylab('reads in tpm')
+        
+      }
+      
+      else {
+        ggplot(data = dataTemp, aes(x=cell_subpopulation,y=fpkm))+
+          geom_boxplot(aes(fill=cell_subpopulation),alpha=0.2, outlier.shape = NA)+
+          theme_bw()+ylab('reads in fpkm')
+      }
+  })
+  
+  
+  # Downloadable table of dataset counts-
+  output$downloadData1 <- downloadHandler(
+    filename = function() {
+      paste("dataAndMetaCounts_gene.txt")
+    },
+    content = function(file) {
+      write.table(data1, file, row.names = F, col.names = T, quote = F, sep ="\t")
+    }
+  )
+  
+  
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server, options = list(height = 900))
+
+```  
+Useful for look-up of and visualizing RNAseq data for individual genes
+
+
+
+```{r, echo=TRUE, results='hide'}
+
+
+
+# Define UI for application
+ui <- fluidPage(
+ 
+  sidebarLayout(
+    sidebarPanel(textInput(inputId = "geneName1",label = "Gene Name (Mouse): (Capitalize first letter)"),
+                 
+                 #select data value to be graphed
+                 selectInput("countType", 
+                             label = "Choose a count type to display",
+                             choices = c("count", "tpm", "fpkm")),
+                 
+                 #click to download dataset and metadata table
+                 downloadButton("downloadData", "Download Data Table")
+    ),
+    mainPanel(h4('Non-GCB v GCB Bulk RNA-seq'),
+              h6('each point represents a biological replicate'),
+              h6('Experimental design:'),
+              imageOutput("overview"),
+             )
+  ),
+  
+  plotOutput(outputId = "genePlot1",height=300,width=700)
+)
+
+```
+
+
+```{r, echo=TRUE, results='hide'}
+
+# Define server logic required to draw a histogram
+
+server <- function(input, output) {
+  data1 <- read.table('dataAndMetaCounts_gene.txt', header = TRUE, sep = "\t")  
+  abvData1 <- reactive({
+    dplyr::filter(data1, gene_name == input$geneName1)
+  })
+  
+  output$overview <- renderImage({
+    list(src = 'overview.png', height = 350, width = 350)
+  }, deleteFile = FALSE)
+  
+  output$genePlot1 <- renderPlot({
+    
+    dataTemp <- selectedData1()
+    
+      output$value <- renderText({ input$somevalue })
+      
+      if(input$countType == "count"){
+        ggplot(data = dataTemp, aes(x=cell_subpopulation,y=est_counts))+
+          geom_boxplot(aes(fill=cell_subpopulation),alpha=0.2, outlier.shape = NA)+
+          theme_bw()+ylab('raw count')
+      } 
+      
+      else if(input$countType == "tpm"){
+        ggplot(data = dataTemp, aes(x=cell_subpopulation,y=tpm))+
+          geom_boxplot(aes(fill=cell_subpopulation),alpha=0.2, outlier.shape = NA)+
+          theme_bw()+ylab('reads in tpm')
+        
+      }
+      
+      else {
+        ggplot(data = dataTemp, aes(x=cell_subpopulation,y=fpkm))+
+          geom_boxplot(aes(fill=cell_subpopulation),alpha=0.2, outlier.shape = NA)+
+          theme_bw()+ylab('reads in fpkm')
+      }
+  })
+  
+  # Downloadable table of dataset counts-
+  output$downloadData1 <- downloadHandler(
+    filename = function() {
+      paste("dataAndMetaCounts_gene.txt")
+    },
+    content = function(file) {
+      write.table(data1, file, row.names = F, col.names = T, quote = F, sep ="\t")
+    }
+  )
+  
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server, options = list(height = 900))
+  
+```
+
+
+<br>
+
+
+
+***
+
+<br>
+<br>
+<br>
+
+
+### Template & Example 2: 
+
+***
+
+* Slider bar for differential expression cutoffs
+
+* Look-up with table output
+
+<br>
+
+```{r, echo=FALSE}
+ui <- fluidPage(
+
+h3('log2-Fold Change'),
+                sliderInput("slider", h5("Value of log2Change"),
+                                                 min = 0.0, max = 10.0, value = 5.4, step = 0.2),
+                                textInput(inputId = "geneName2",label = "Gene Name (capitalize first letter)"),
+                     downloadButton("downloadData2", "Download Data Table"),
+                     plotOutput(outputId = "genePlot2",height=270,width=700),
+                    
+          h5('Data Table'),
+          h2(''),
+          h2(''),
+                     tableOutput("table")
+)
+
+
+server <- function(input, output) {
+
+  data2 <- read.table('DESeqResults.txt', header = TRUE, sep = "\t")
+  
+output$genePlot2 <- renderPlot({
+    abvData <- filter(data2, abs(log2FoldChange)>input$slider & pvalue < 0.05)
+    ggplot(data = abvData, aes(x = gene_name, y = log2FoldChange))+ geom_col()+geom_label(aes(label = gene_name), size = 1.85, nudge_y = .7) +
+            theme(axis.text.x = element_text(angle=90)) 
+  })
+
+
+output$table <- renderTable({
+  filter(data2, gene_name==input$geneName2)
+  })
+
+
+# Downloadable table of DESeq results -
+output$downloadData2 <- downloadHandler(
+    filename = function() {
+      paste("DESeqResults.txt")
+    },
+    content = function(file) {
+      write.table(data2, file, row.names = F, col.names = T, quote = F, sep ="\t")
+    }
+  )
+
+}
+
+
+shinyApp(ui = ui, server = server, options = list(height = 790))
+
+```
+
+```{r, echo=TRUE, results='hide'}
+ui <- fluidPage(
+
+h3('log2-Fold Change'),
+          sliderInput("slider", h5("Value of log2Change"),
+                      min = 0.0, max = 10.0, value = 5.4, step = 0.2),
+                      textInput(inputId = "geneName2",label = "Gene Name (capitalize first letter)"),
+                      downloadButton("downloadData2", "Download Data Table"),
+            plotOutput(outputId = "genePlot2",height=270,width=700),
+          h5('Data Table'),
+          h2(''),
+          h2(''),
+            tableOutput("table")
+)
+
+
+server <- function(input, output) {
+
+  data2 <- read.table('DESeqResults.txt', header = TRUE, sep = "\t")
+  
+output$genePlot2 <- renderPlot({
+    abvData <- filter(data2, abs(log2FoldChange)>input$slider & pvalue < 0.05)
+    ggplot(data = abvData, aes(x = gene_name, y = log2FoldChange))+ geom_col()+geom_label(aes(label = gene_name), size = 1.85, nudge_y = .7) +
+            theme(axis.text.x = element_text(angle=90)) 
+  })
+
+
+output$table <- renderTable({
+  filter(data2, gene_name==input$geneName2)
+  })
+
+
+# Downloadable table of DESeq results -
+output$downloadData2 <- downloadHandler(
+    filename = function() {
+      paste("DESeqResults.txt")
+    },
+    content = function(file) {
+      write.table(data2, file, row.names = F, col.names = T, quote = F, sep ="\t")
+    }
+  )
+
+}
+
+
+shinyApp(ui = ui, server = server, options = list(height = 790))
+
+```
+
+
+<br>
+
+***
+
+<br>
+<br>
+
+###### Other widgets and examples can be found at: [Shiny Widget Gallery](https://shiny.rstudio.com/gallery/widget-gallery.html) 
+
+***
+<br>
+<br>
+<br>
+
+### Host Servers and Storage
+
+***
+
+##### ShinyServer: host at [shinyapps.io](https://www.shinyapps.io)
+publish to your shinyapps.io account - and access by shareable web link
+
+<br>
+<br>
+
+ ***
+
+Data is from a subset of RNASeq reads courtesy of [Cho et. al., 2016](https://www.nature.com/articles/nature19334), GEO [GSE77113](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE77113), and aligned via [Kallisto](https://pachterlab.github.io/kallisto/)
+
+[Immune Cell Image Clipart](https://www.clipart.email/download/11163097.html)
+
+
